@@ -1,6 +1,6 @@
 [package]
 name = "ter_menu"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["wangtianjian <OrdinaryDay21@outlook.com>"]
 description = "A terminal-based interactive dropdown selection component"
