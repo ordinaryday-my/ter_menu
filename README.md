@@ -1,4 +1,4 @@
-﻿# TerminalDropDown
+# TerminalDropDown
 
 A terminal-based interactive dropdown selection component for Rust, enabling users to navigate options with keyboard arrows, confirm selections with Enter, and cancel with Escape.
 
