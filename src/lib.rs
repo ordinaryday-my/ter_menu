@@ -2,16 +2,20 @@ use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
+use crossterm::terminal::{Clear, ClearType};
+use crossterm::ExecutableCommand;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
+use std::sync::mpsc;
 use std::time::Instant;
 use std::{
     io::{self, prelude::*},
     thread,
 };
+use std::sync::mpsc::Receiver;
 
 /// A terminal-based interactive dropdown selection component.
 ///
@@ -33,6 +37,7 @@ where
     drop_down: Arc<Mutex<HashMap<T, F>>>,
     handle: JoinHandle<()>,
     item_n: usize,
+    receiver: Receiver<usize>,
 }
 
 impl<T, F> TerminalDropDown<T, F>
@@ -56,6 +61,7 @@ where
     pub fn use_drop_down(drop_down: HashMap<T, F>, item_n: usize) -> Self {
         let drop_down = Arc::new(Mutex::new(drop_down));
         let cloned = drop_down.clone();
+        let (tx, rx) = mpsc::channel();
 
         let handle = thread::spawn(move || {
             let options: Vec<T> = cloned.lock().unwrap().keys().cloned().collect();
@@ -72,7 +78,6 @@ where
 
             let mut current_idx = 0;
             Self::display_menu(&options, current_idx, item_n);
-
             let mut last_time = Instant::now();
             loop {
                 // 处理事件读取错误
@@ -107,6 +112,7 @@ where
                         let selected_key = &options[current_idx];
                         println!("\nConfirm delete: {}", selected_key);
                         if let Some(func) = cloned.lock().unwrap().remove(selected_key) {
+                            tx.send(current_idx).unwrap();
                             func(selected_key);
                         }
                         break;
@@ -129,6 +135,7 @@ where
             drop_down,
             handle,
             item_n,
+            receiver: rx,
         }
     }
 
@@ -145,7 +152,9 @@ where
     /// window for when there are more items than can be displayed at once.
     pub fn display_menu(options: &[T], current_idx: usize, max_show: usize) {
         // Clear screen and reset cursor position
-        print!("\x1B[2J\x1B[1;1H");
+        let mut stdout = io::stdout();
+        stdout.execute(Clear(ClearType::All)).unwrap();
+        stdout.execute(crossterm::cursor::MoveTo(0, 0)).unwrap();
         // 处理刷新错误
         if let Err(e) = io::stdout().flush() {
             eprintln!("Failed to flush stdout: {}", e);
@@ -198,6 +207,7 @@ where
     /// # Usage
     /// Call this method after creating the TerminalDropDown to wait for user input completion.
     pub fn wait(self) -> thread::Result<()> {
+
         self.handle.join()
     }
 }
