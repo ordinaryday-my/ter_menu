@@ -37,7 +37,7 @@ where
     drop_down: Arc<Mutex<HashMap<T, F>>>,
     handle: JoinHandle<()>,
     item_n: usize,
-    receiver: Receiver<usize>,
+    receiver: Receiver<Option<usize>>,
 }
 
 impl<T, F> TerminalDropDown<T, F>
@@ -112,7 +112,7 @@ where
                         let selected_key = &options[current_idx];
                         println!("\nConfirm delete: {}", selected_key);
                         if let Some(func) = cloned.lock().unwrap().remove(selected_key) {
-                            tx.send(current_idx).unwrap();
+                            tx.send(Some(current_idx)).unwrap();
                             func(selected_key);
                         }
                         break;
@@ -206,8 +206,8 @@ where
     ///
     /// # Usage
     /// Call this method after creating the TerminalDropDown to wait for user input completion.
-    pub fn wait(self) -> thread::Result<()> {
-
-        self.handle.join()
+    pub fn wait(self) -> thread::Result<Option<usize>> {
+        self.handle.join()?;
+        Ok(self.receiver.recv().unwrap())
     }
 }
