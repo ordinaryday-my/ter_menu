@@ -28,7 +28,7 @@ use std::{
 pub struct TerminalDropDown<T, F>
 where
     T: Display + Hash + Clone + Send + Eq + 'static,
-    F: FnMut(&T) + Send + 'static,
+    F: FnOnce(&T) + Send + 'static,
 {
     drop_down: Arc<Mutex<HashMap<T, F>>>,
     handle: JoinHandle<()>,
@@ -38,7 +38,7 @@ where
 impl<T, F> TerminalDropDown<T, F>
 where
     T: Display + Hash + Clone + Send + Eq + 'static,
-    F: FnMut(&T) + Send + 'static,
+    F: FnOnce(&T) + Send + 'static,
 {
     /// Creates a new TerminalDropDown instance and starts the interaction thread.
     ///
@@ -106,7 +106,7 @@ where
                     KeyCode::Enter => {
                         let selected_key = &options[current_idx];
                         println!("\nConfirm delete: {}", selected_key);
-                        if let Some(mut func) = cloned.lock().unwrap().remove(selected_key) {
+                        if let Some(func) = cloned.lock().unwrap().remove(selected_key) {
                             func(selected_key);
                         }
                         break;
